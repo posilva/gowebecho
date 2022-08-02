@@ -11,7 +11,10 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-var e *echo.Echo
+var (
+	e *echo.Echo
+	t *PageTemplate
+)
 
 // Setup the web server
 func Setup() error {
@@ -20,6 +23,7 @@ func Setup() error {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
+	setupTemplates()
 	setupRoutes()
 	return nil
 
@@ -55,4 +59,18 @@ func setupRoutes() {
 		return c.String(http.StatusOK, "it works")
 	})
 
+	e.GET("/index", func(c echo.Context) error {
+		return c.Render(http.StatusOK, "index", "World")
+	})
+
+	e.GET("/hello/:name", func(c echo.Context) error {
+		name := c.Param("name")
+		return c.Render(http.StatusOK, "hello", name)
+	})
+
+}
+
+func setupTemplates() {
+	t = NewTemplate("web/public/views/*.tmpl")
+	e.Renderer = t
 }
