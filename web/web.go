@@ -23,6 +23,8 @@ func Setup() error {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
+	e.Static("/static", "web/public/assets")
+
 	setupTemplates()
 	setupRoutes()
 	return nil
@@ -66,6 +68,10 @@ func setupRoutes() {
 	e.GET("/hello/:name", func(c echo.Context) error {
 		name := c.Param("name")
 		return c.Render(http.StatusOK, "hello", name)
+	})
+
+	e.GET("/image", func(c echo.Context) error {
+		return c.Render(http.StatusOK, "image", nil)
 	})
 
 }
