@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/gorilla/sessions"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -19,7 +21,10 @@ var (
 // Setup the web server
 func Setup() error {
 	e = echo.New()
+	e.HideBanner = true
+	e.DisableHTTP2 = true
 
+	e.Use(session.Middleware(sessions.NewCookieStore([]byte("session_secret"))))
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
@@ -74,6 +79,32 @@ func setupRoutes() {
 		return c.Render(http.StatusOK, "image", nil)
 	})
 
+	e.GET("/cookie", func(c echo.Context) error {
+		cookie, err := c.Cookie("cookie_test")
+		if err != nil {
+			cookie = new(http.Cookie)
+			cookie.Name = "cookie_test"
+			cookie.Value = "new cookie data"
+			c.SetCookie(cookie)
+		}
+
+		cookie.Value = "new" + cookie.Value
+		c.SetCookie(cookie)
+		return c.Render(http.StatusOK, "cookie", cookie.Value)
+	})
+
+	e.GET("/session", func(c echo.Context) error {
+		sess, _ := session.Get("session", c)
+		sess.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   86400 * 7,
+			HttpOnly: true,
+		}
+		sess.Values["foo"] = "bar"
+		sess.Save(c.Request(), c.Response())
+		return c.NoContent(http.StatusOK)
+
+	})
 }
 
 func setupTemplates() {
