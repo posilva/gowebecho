@@ -3,12 +3,14 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/gorilla/sessions"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 )
 
 func Root(c echo.Context) error {
+	// Get session data
+
 	return c.String(http.StatusOK, "it works")
 }
 
@@ -35,7 +37,7 @@ func Cookie(c echo.Context) error {
 }
 
 func Session(c echo.Context) error {
-	sess, _ := session.Get("session")
+	sess, _ := session.Get("session", c)
 	sess.Options = &sessions.Options{
 		Path:     "/",
 		MaxAge:   86400 * 7,

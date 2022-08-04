@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"gowebecho/web/handlers"
 	"net/http"
 	"os"
 	"os/signal"
@@ -62,49 +63,7 @@ func Serve(address string) {
 }
 
 func setupRoutes() {
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "it works")
-	})
-
-	e.GET("/index", func(c echo.Context) error {
-		return c.Render(http.StatusOK, "index", "World")
-	})
-
-	e.GET("/hello/:name", func(c echo.Context) error {
-		name := c.Param("name")
-		return c.Render(http.StatusOK, "hello", name)
-	})
-
-	e.GET("/image", func(c echo.Context) error {
-		return c.Render(http.StatusOK, "image", nil)
-	})
-
-	e.GET("/cookie", func(c echo.Context) error {
-		cookie, err := c.Cookie("cookie_test")
-		if err != nil {
-			cookie = new(http.Cookie)
-			cookie.Name = "cookie_test"
-			cookie.Value = "new cookie data"
-			c.SetCookie(cookie)
-		}
-
-		cookie.Value = "new" + cookie.Value
-		c.SetCookie(cookie)
-		return c.Render(http.StatusOK, "cookie", cookie.Value)
-	})
-
-	e.GET("/session", func(c echo.Context) error {
-		sess, _ := session.Get("session", c)
-		sess.Options = &sessions.Options{
-			Path:     "/",
-			MaxAge:   86400 * 7,
-			HttpOnly: true,
-		}
-		sess.Values["foo"] = "bar"
-		sess.Save(c.Request(), c.Response())
-		return c.NoContent(http.StatusOK)
-
-	})
+	e.GET("/", handlers.Root)
 }
 
 func setupTemplates() {
