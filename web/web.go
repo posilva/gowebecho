@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"gowebecho/web/auth"
 	"gowebecho/web/handlers"
 	"net/http"
 	"os"
@@ -64,6 +65,13 @@ func Serve(address string) {
 
 func setupRoutes() {
 	e.GET("/", handlers.Root)
+	e.GET("/auth", func(c echo.Context) error {
+		prov, err := auth.NewOktaProvider()
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to create auth provider")
+		}
+		return prov.Authorize(c, "state", "nonce")
+	})
 }
 
 func setupTemplates() {
