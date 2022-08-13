@@ -45,12 +45,12 @@ var serveCmd = &cobra.Command{
 		util.BindPFlag(ServerAddressConfigKey, cmd)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		err := web.Setup()
+		err := web.Server.Setup()
 		if err != nil {
 			panic(fmt.Errorf("failed to setup server %v", err))
 		}
 
-		web.Serve(viper.GetString(ServerAddressConfigKey))
+		web.Server.Serve(viper.GetString(ServerAddressConfigKey))
 	},
 }
 

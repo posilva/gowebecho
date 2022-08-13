@@ -45,7 +45,7 @@ func defaultOktaConfig() OktaConfig {
 }
 
 // NewOktaProviderWithConfig creates a new instance of Okta provider based on the configuration provided
-func NewOktaProviderWithConfig(c OktaConfig) (*OktaProvider, error) {
+func NewOktaProviderWithConfig(c OktaConfig) *OktaProvider {
 
 	baseURL := fmt.Sprintf("https://%s/oauth2/default/v1/authorize", c.Domain)
 
@@ -68,27 +68,26 @@ func NewOktaProviderWithConfig(c OktaConfig) (*OktaProvider, error) {
 		CustomURL: baseURL,
 		Client:    client,
 		Values:    vals,
-	}, nil
+	}
 }
 
 // NewOktaProvider creates an Okta provider with default config
-func NewOktaProvider() (*OktaProvider, error) {
+func NewOktaProvider() *OktaProvider {
 	return NewOktaProviderWithConfig(defaultOktaConfig())
 }
 
-// Authorize executes a authorize method on Okta OpenID connect API
+// AuthorizeURL executes a authorize method on Okta OpenID connect API
 // see: https://developer.okta.com/docs/reference/api/oidc/#authorize
-func (p *OktaProvider) Authorize(c echo.Context, state string, nonce string) error {
-	v := p.Values
-	v.Set("nonce", nonce)
-	v.Set("state", state)
-
+func (p *OktaProvider) AuthorizeURL(c echo.Context, state string, nonce string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, p.CustomURL, nil)
 	if err != nil {
 		c.Logger().Errorf("%v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("failed to create request: %v", err))
+		return "", nil
 	}
 
-	req.URL.RawQuery = v.Encode()
-	return c.Redirect(http.StatusMovedPermanently, req.URL.String())
+	p.Values.Set("nonce", nonce)
+	p.Values.Set("state", state)
+
+	req.URL.RawQuery = p.Values.Encode()
+	return req.URL.String(), nil
 }

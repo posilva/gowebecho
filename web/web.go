@@ -15,35 +15,45 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+// WebService holds the data to  interact with the service
+type WebService struct {
+	e            *echo.Echo
+	authProvider *auth.OktaProvider
+}
+
 var (
-	e *echo.Echo
-	t *PageTemplate
+	Server WebService
 )
 
+func init() {
+	ap := auth.NewOktaProvider()
+	Server = WebService{
+		e:            echo.New(),
+		authProvider: ap,
+	}
+}
+
 // Setup the web server
-func Setup() error {
-	e = echo.New()
-	e.HideBanner = true
-	e.DisableHTTP2 = true
+func (s *WebService) Setup() error {
+	s.e.Renderer = NewTemplate("web/public/views/*.tmpl")
 
-	e.Use(session.Middleware(sessions.NewCookieStore([]byte("session_secret"))))
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-
-	e.Static("/static", "web/public/assets")
-
-	setupTemplates()
-	setupRoutes()
+	s.e.HideBanner = true
+	s.e.DisableHTTP2 = true
+	s.e.Use(session.Middleware(sessions.NewCookieStore([]byte("session_secret"))))
+	s.e.Use(middleware.Logger())
+	s.e.Use(middleware.Recover())
+	s.e.Static("/static", "web/public/assets")
+	s.setupRoutes()
 	return nil
 
 }
 
-//Serve handles server initialization with support for graceful shutdown
-func Serve(address string) {
+// Serve handles server initialization with support for graceful shutdown
+func (s *WebService) Serve(address string) {
 
 	go func() {
-		if err := e.Start(address); err != nil && err != http.ErrServerClosed {
-			e.Logger.Fatal("shutting down the server")
+		if err := s.e.Start(address); err != nil && err != http.ErrServerClosed {
+			s.e.Logger.Fatal("shutting down the server")
 		}
 	}()
 
@@ -56,25 +66,27 @@ func Serve(address string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := e.Shutdown(ctx); err != nil {
-		e.Logger.Fatal(err)
+	if err := s.e.Shutdown(ctx); err != nil {
+		s.e.Logger.Fatal(err)
 	}
 
-	e.Logger.Fatal(e.Start(address))
+	s.e.Logger.Fatal(s.e.Start(address))
 }
 
-func setupRoutes() {
-	e.GET("/", handlers.Root)
-	e.GET("/auth", func(c echo.Context) error {
-		prov, err := auth.NewOktaProvider()
+func (s *WebService) setupRoutes() {
+	s.e.GET("/", handlers.Root)
+	s.e.GET("/auth", func(c echo.Context) error {
+		url, err := s.authProvider.AuthorizeURL(c, c.Request().URL.String(), "nonce")
 		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to create auth provider")
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get authorization url")
 		}
-		return prov.Authorize(c, "state", "nonce")
-	})
-}
 
-func setupTemplates() {
-	t = NewTemplate("web/public/views/*.tmpl")
-	e.Renderer = t
+		s.e.Logger.Warnf("url: %s", url)
+		return c.Redirect(http.StatusMovedPermanently, url)
+	})
+
+	s.e.GET("/authorization-code/callback", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	})
+
 }
